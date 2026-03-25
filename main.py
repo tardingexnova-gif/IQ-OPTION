@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+ruta_env = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(ruta_env)
+
 from iqoptionapi.stable_api import IQ_Option
 import pandas as pd
 import time
