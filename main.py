@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-
 from iqoptionapi.stable_api import IQ_Option
 import pandas as pd
 import time
@@ -33,35 +32,66 @@ if not iq.check_connect():
 else:
     print("✅ Conectado")
 
-print("⏳ Esperando cierre de vela...")
-
-while True:
-    ahora = datetime.now()
-    if ahora.second == 0:
-        print(f"\n⏰ Vela cerrada detectada: {ahora.strftime('%H:%M:%S')}")
-        break
-    time.sleep(0.2)
-
-print("\n📥 Descargando velas...\n")
-
-for activo in ACTIVOS:
+# ---------------- FUNCION PARA GUARDAR ---------------- #
+def guardar_velas(activo, cantidad):
     try:
-        velas = iq.get_candles(activo, 60, 1000, time.time())
+        velas = iq.get_candles(activo, 60, cantidad, time.time())
         df = pd.DataFrame(velas)
 
         if df.empty:
             print(f"⚠️ {activo} sin datos")
-            continue
+            return
 
         df = df.sort_values("from")
         df = df[['from', 'open', 'max', 'min', 'close']]
 
-        nombre = f"{activo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        df.to_csv(nombre, index=False)
+        nombre_archivo = f"{activo}.csv"
 
-        print(f"💾 {activo} guardado ({len(df)} velas)")
+        if os.path.exists(nombre_archivo):
+            df.to_csv(nombre_archivo, mode='a', header=False, index=False)
+        else:
+            df.to_csv(nombre_archivo, index=False)
+
+        print(f"💾 {activo} +{len(df)} velas")
 
     except Exception as e:
         print(f"⚠️ Error en {activo}: {e}")
 
-print("\n✅ PROCESO TERMINADO")
+# ---------------- DESCARGA INICIAL ---------------- #
+print("\n📥 Descargando 100 velas iniciales...\n")
+
+for activo in ACTIVOS:
+    guardar_velas(activo, 100)
+
+print("\n🔁 Iniciando ciclo escalonado preciso...\n")
+
+# Tiempo base del sistema
+inicio_ciclo = time.time()
+
+while True:
+    # ================= BLOQUE 5 MIN ================= #
+    objetivo_5min = inicio_ciclo + 300  # 5 minutos
+
+    tiempo_restante = objetivo_5min - time.time()
+    if tiempo_restante > 0:
+        print(f"⏳ Esperando {round(tiempo_restante, 2)} segundos para bloque de 5 min...")
+        time.sleep(tiempo_restante)
+
+    print("\n📥 Descargando 5 velas...\n")
+    for activo in ACTIVOS:
+        guardar_velas(activo, 5)
+
+    # ================= BLOQUE 15 MIN ================= #
+    objetivo_15min = objetivo_5min + 900  # 15 minutos adicionales
+
+    tiempo_restante = objetivo_15min - time.time()
+    if tiempo_restante > 0:
+        print(f"⏳ Esperando {round(tiempo_restante, 2)} segundos para bloque de 15 min...")
+        time.sleep(tiempo_restante)
+
+    print("\n📥 Descargando 10 velas...\n")
+    for activo in ACTIVOS:
+        guardar_velas(activo, 10)
+
+    # Reiniciar ciclo tomando como referencia el tiempo exacto esperado
+    inicio_ciclo = objetivo_15min
