@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from iqoptionapi.stable_api import IQ_Option
 import pandas as pd
 import time
