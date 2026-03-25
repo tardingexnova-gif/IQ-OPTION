@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-load_dotenv()
+import os
 
 ruta_env = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(ruta_env)
